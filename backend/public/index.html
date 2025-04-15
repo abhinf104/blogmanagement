@@ -1,0 +1,78 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Store API - Project Summary</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body style="background-color: gray">
+    <header>
+      <h1>Store API Project Summary</h1>
+      <h2>Advance Filtering & Sorting with Mongoose and Express</h2>
+      <p>Date: October 25, 2024</p>
+    </header>
+    <main>
+      <section>
+        <h2>Overview</h2>
+        <p>
+          This project is a Store API built with Express and Mongoose. It allows
+          for advanced filtering and sorting of products based on various
+          criteria.
+        </p>
+      </section>
+      <section>
+        <h2>Major Learnings</h2>
+        <ul>
+          <li>
+            <strong>Populating data</strong> from JSON and
+            <strong>Using Mongoose</strong>,working with Postman for API testing
+          </li>
+          <li><strong>Using libraries</strong> for status code management</li>
+          <li>
+            <strong>Extracting parameters</strong> from <code>req.query</code>
+          </li>
+          <li><strong>Creating dynamic query objects</strong> for Mongoose</li>
+          <li><strong>Implementing advanced filtering and sorting</strong></li>
+          <li><strong>Handling pagination</strong> in API responses</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Functionality</h2>
+        <ul>
+          <li>
+            <strong>Dynamic Filtering:</strong> Allows filtering products based
+            on fields like <code>featured</code>, <code>company</code>, and
+            <code>name</code> using the <code>GET /products</code> endpoint.
+          </li>
+          <li>
+            <strong>Numeric Filtering:</strong> Supports various operators for
+            numeric fields via <code>numericFilter</code> on fields like
+            <code>price</code>, <code>rating</code> of the query.
+          </li>
+          <li>
+            <strong>Sorting:</strong> Sort results based on specified fields
+            using the <code>sort</code> parameter.
+          </li>
+          <li>
+            <strong>Pagination:</strong> Implement pagination with
+            <code>limit</code> and <code>page</code> query parameters.
+          </li>
+        </ul>
+      </section>
+      <section>
+        <h2>Database Connection</h2>
+        <p>
+          The project connects to a MongoDB database using Mongoose to handle
+          data management and querying.
+        </p>
+      </section>
+      <section>
+        <h2>Models</h2>
+        <p>
+          The Product model is defined using Mongoose schema in
+          <a href="../model/products.js">products.js</a>.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

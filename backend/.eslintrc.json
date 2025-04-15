@@ -1,0 +1,29 @@
+{
+  // Extending base configurations and plugins
+  "extends": [
+    "eslint:recommended", // Use recommended ESLint rules
+    "plugin:import/errors"// Use import plugin to handle import/export errors
+  
+  ],
+  "rules": {
+    // Custom rules
+  },
+  "plugins": [
+    "import" // Import plugin for ESLint
+  ],
+  "parserOptions": {
+    "ecmaVersion": 2022, // Use ECMAScript 2022 syntax
+    "sourceType": "module" // Enable ES6 modules
+  },
+  "env": {
+    "es6": true, // Enable ES6 global variables
+    "node": true // Enable Node.js global variables
+  },
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "extensions": [".js"] // Resolve these extensions for imports
+      }
+    }
+  }
+}
