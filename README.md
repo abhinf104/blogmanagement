@@ -119,14 +119,14 @@ npm run dev
 
 ```markdown
 blogmanagement/
-├── backend/ # Backend codebase
+├── server/ # Backend codebase
 │ ├── config/ # Configuration files
 │ ├── controllers/ # API controllers
 │ ├── middlewares/ # Express middlewares
 │ ├── models/ # Mongoose models
 │ ├── routes/ # API routes
 │ └── server.js # Entry point
-├── frontend/ # Frontend codebase
+├── client/ # Frontend codebase
 │ ├── public/ # Static files
 │ ├── src/
 │ │ ├── assets/ # Images, fonts, styles
@@ -140,7 +140,7 @@ blogmanagement/
 │ │ └── main.jsx # Entry point
 │ ├── index.html # HTML template
 │ └── vite.config.js # Vite configuration
-├── [package.json](http://_vscodecontentref_/1) # Project dependencies and scripts
+├── package.json
 └── vercel.json # Vercel deployment configuration
 ```
 
