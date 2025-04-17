@@ -13,7 +13,7 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ msg: "Authentication invalid" });
     }
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, "1234");
     // Attach user to request object
     req.user = {
       userId: payload.userId,

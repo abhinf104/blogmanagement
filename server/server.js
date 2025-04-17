@@ -6,7 +6,7 @@ const connectDB = require("./config/mongodb.js");
 const connectCloudinary = require("./config/cloudinary.js");
 const path = require("path");
 require("dotenv").config();
-// // Add this import for network interface information
+
 // const os = require("os");
 
 const authRouter = require("./routes/auth-routes");
@@ -20,14 +20,13 @@ const notFound = require("./middlewares/not-found");
 const cookieParser = require("cookie-parser");
 // app config
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:4000",
   "http://localhost:5173",
-  process.env.CLIENT_ORIGIN || "https://your-vercel-app-name.vercel.app",
+  "https://your-vercel-app-name.vercel.app",
 ];
-// No need to redefine __dirname as it's already available in CommonJS
 
 // Create HTTP server using Express app
 const server = http.createServer(app);
@@ -84,7 +83,7 @@ app.use(
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser(process.env.JWT_SECRET));
+app.use(cookieParser("1234"));
 app.use(express.static("./public"));
 
 //creating routes
@@ -94,20 +93,16 @@ app.use("/api/posts", postRouter);
 app.use("/api/images", imageRouter);
 app.use("/api/comments", commentRouter);
 
-if (process.env.NODE_ENV === "production") {
-  const frontendPath = path.resolve(__dirname, "../frontend/dist");
-  app.use(express.static(frontendPath));
+const clientPath = path.resolve(__dirname, "../client/dist");
+app.use(express.static(clientPath));
 
-  app.get("*", (req, res, next) => {
-    // This should not match API routes - move this after your API routes
-    if (!req.path.startsWith("/api") && !req.path.startsWith("/socket.io")) {
-      res.sendFile(path.join(frontendPath, "index.html"));
-    } else {
-      // Let the request continue to API routes
-      next();
-    }
-  });
-}
+app.get("*", (req, res, next) => {
+  if (!req.path.startsWith("/api") && !req.path.startsWith("/socket.io")) {
+    res.sendFile(path.join(clientPath, "index.html"));
+  } else {
+    next();
+  }
+});
 
 // handle all unknown routes
 app.use(notFound);

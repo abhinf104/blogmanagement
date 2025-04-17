@@ -1,21 +1,38 @@
 {
   "name": "blogmanagement",
   "version": "1.0.0",
-  "description": "\"a full stack app to manage and read blogs\"",
-  "license": "ISC",
-  "author": "abhinf104",
-  "type": "commonjs",
-  "main": "backend/server.js",
-  "engines": {
-    "node": ">=18.0.0"
-  },
+  "description": "blog management",
+  "main": "server.js",
   "scripts": {
-    "install-server": "cd Server && npm install",
-    "start-server": "cd Server && node index.js",
-    "install-client": "cd client && npm install",
-    "build-client": "cd client && npm run build",
-    "start-client": "cd client && npm run start",
-    "vercel-build": "npm run build",
+    "dev": "nodemon server/server.js",
+    "build": "npm install && npm install --prefix client && npm run build --prefix client",
+    "start": "nodemon server/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cloudinary": "^1.41.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^8.6.0",
+    "express": "^4.21.1",
+    "express-validator": "^7.2.1",
+    "http-status-codes": "^2.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.9.0",
+    "mongoose": "^5.13.22",
+    "multer": "^1.4.5-lts.2",
+    "multer-storage-cloudinary": "^4.0.0",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "eslint": "8.24.0",
+    "eslint-config-prettier": "8.5.0",
+    "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-jsx-a11y": "6.6.1",
+    "nodemon": "^2.0.22"
   }
 }

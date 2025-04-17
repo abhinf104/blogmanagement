@@ -35,13 +35,13 @@ BlogMaster is a comprehensive blog management system built with the MERN stack (
 
 ## Tech Stack
 
-### Frontend
+### client
 
 - **React 19** with functional components and hooks
 - **Redux Toolkit** for state management
 - **React Router v6** for navigation
 - **Socket.io Client** for real-time features
-- **Vite** for frontend build tooling
+- **Vite** for client build tooling
 - **CSS-in-JSX** for component styling
 
 ### Backend
@@ -74,8 +74,8 @@ BlogMaster is a comprehensive blog management system built with the MERN stack (
    # Install backend dependencies
    npm install
 
-   # Install frontend dependencies
-   cd frontend
+   # Install client dependencies
+   cd client
    npm install
 cd ..
 ```
@@ -92,7 +92,7 @@ CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 
-Create a .env file in the frontend directory with:
+Create a .env file in the client directory with:
 
 ```bash
 VITE_API_URL=http://localhost:3000
@@ -101,18 +101,18 @@ VITE_SOCKET_URL=http://localhost:3000
 
 4. Run the application
 
-# Run backend and frontend concurrently (development mode)
+# Run backend and client concurrently (development mode)
 
 npm run dev
 
-# In a separate terminal, run the frontend
+# In a separate terminal, run the client
 
-cd frontend
+cd client
 npm run dev
 
 5. Access the application
 
-- Frontend: http://localhost:5173
+- client: http://localhost:5173
 - Backend API: http://localhost:3000
 
 ## Project Structure
@@ -126,7 +126,7 @@ blogmanagement/
 │ ├── models/ # Mongoose models
 │ ├── routes/ # API routes
 │ └── server.js # Entry point
-├── client/ # Frontend codebase
+├── client/ # client codebase
 │ ├── public/ # Static files
 │ ├── src/
 │ │ ├── assets/ # Images, fonts, styles
@@ -171,4 +171,3 @@ blogmanagement/
 
 - GET /api/users/profile - Get current user profile (auth required)
 - PUT /api/users/profile - Update user profile (auth required)
-

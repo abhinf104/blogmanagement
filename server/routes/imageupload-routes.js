@@ -26,13 +26,13 @@ router.post(
 
 // Profile media route (Handles both image/video)
 router.post(
-  "/upload/profile-media", // The path your frontend is calling
+  "/upload/profile-media", // The path your client is calling
   authenticate,
   uploadProfileMedia.single("media"), // Use middleware configured for 'auto' resource_type and 'media' field
   uploadProfileMediaController // Use the appropriate controller
 );
 
-// Optional: Keep the old /upload/profile route or remove/redirect it
+// // Optional: Keep the old /upload/profile route or remove/redirect it
 // router.post(
 //   "/upload/profile",
 //   authenticate,

@@ -3,7 +3,7 @@ const router = express.Router();
 const { authenticate, authorize } = require("../middlewares/auth"); // Assuming auth middleware exists
 const {
   updateProfile,
-  getUserProfile, // Public profile by ID
+  getUserProfile,
   getAllUsers,
 } = require("../controllers/user-controller");
 

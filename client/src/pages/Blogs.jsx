@@ -1,21 +1,13 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, Fragment } from "react";
 import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchPosts, setFilters, setPage } from "../redux/slices/postSlice";
-import "../assets/styles/posts.css";
+import { fetchBlogs, setFilters, setPage } from "../redux/slices/blogSlice";
+import "../assets/styles/blogs.css";
 
-const Posts = () => {
+const Blogs = () => {
   const dispatch = useDispatch();
-  const {
-    posts,
-    totalPages,
-    loading,
-    error,
-    currentPage,
-    categories,
-    tags,
-    filters,
-  } = useSelector((state) => state.posts);
+  const { Blogs, totalPages, loading, currentPage, categories, tags, filters } =
+    useSelector((state) => state.blogs);
 
   const [viewMode, setViewMode] = useState("grid");
 
@@ -43,7 +35,7 @@ const Posts = () => {
       params.search = filters.search;
     }
 
-    dispatch(fetchPosts(params));
+    dispatch(fetchBlogs(params));
   }, [dispatch, currentPage, filters]);
 
   const handleCategoryChange = (category) => {
@@ -92,19 +84,19 @@ const Posts = () => {
 
   if (loading && currentPage === 1) {
     return (
-      <div className="posts-container">
+      <div className="Blogs-container">
         <div className="loading">
           <div className="spinner"></div>
-          <p>Loading posts...</p>
+          <p>Loading Blogs...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="posts-container">
-      <header className="posts-header">
-        <h1>Blog Posts</h1>
+    <div className="Blogs-container">
+      <header className="Blogs-header">
+        <h1>Blog Blogs</h1>
         <p>Explore our latest articles and insights</p>
 
         {/* Search Bar */}
@@ -119,9 +111,9 @@ const Posts = () => {
         </form>
       </header>
 
-      <div className="posts-content">
+      <div className="Blogs-content">
         {/* Sidebar with Filters */}
-        <aside className="posts-sidebar">
+        <aside className="Blogs-sidebar">
           <div className="filter-group">
             <h3>Categories</h3>
             <ul className="category-list">
@@ -169,9 +161,9 @@ const Posts = () => {
         </aside>
 
         {/* Main Content */}
-        <main className="posts-main">
+        <main className="Blogs-main">
           {/* Controls Bar */}
-          <div className="posts-controls">
+          <div className="Blogs-controls">
             <div className="view-toggle">
               <button
                 className={`toggle-btn ${viewMode === "grid" ? "active" : ""}`}
@@ -204,39 +196,39 @@ const Posts = () => {
             </div>
           </div>
 
-          {/* Posts Display */}
-          {posts.length === 0 ? (
-            <div className="no-posts">
-              <p>No posts found matching your criteria.</p>
+          {/* Blogs Display */}
+          {Blogs.length === 0 ? (
+            <div className="no-Blogs">
+              <p>No Blogs found matching your criteria.</p>
               <button onClick={resetFilters} className="reset-filters">
                 Reset Filters
               </button>
             </div>
           ) : (
-            <div className={`posts-${viewMode}`}>
-              {posts.map((post) => (
-                <div key={post._id} className="post-item">
-                  <div className="post-image">
-                    <Link to={`/posts/${post._id}`}>
+            <div className={`Blogs-${viewMode}`}>
+              {Blogs.map((blog) => (
+                <div key={blog._id} className="blog-item">
+                  <div className="blog-image">
+                    <Link to={`/Blogs/${blog._id}`}>
                       <img
                         src={
-                          post.featuredImage ||
+                          blog.featuredImage ||
                           "https://via.placeholder.com/500x300?text=Blog+Post"
                         }
-                        alt={post.title}
+                        alt={blog.title}
                       />
                     </Link>
-                    {post.categories && post.categories.length > 0 && (
-                      <span className="post-category">
-                        {post.categories[0]}
+                    {blog.categories && blog.categories.length > 0 && (
+                      <span className="blog-category">
+                        {blog.categories[0]}
                       </span>
                     )}
                   </div>
 
-                  <div className="post-content">
-                    <div className="post-meta">
-                      <span className="post-date">
-                        {new Date(post.createdAt).toLocaleDateString(
+                  <div className="blog-content">
+                    <div className="blog-meta">
+                      <span className="blog-date">
+                        {new Date(blog.createdAt).toLocaleDateString(
                           undefined,
                           {
                             year: "numeric",
@@ -247,20 +239,20 @@ const Posts = () => {
                       </span>
                     </div>
 
-                    <Link to={`/posts/${post._id}`} className="post-title">
-                      <h2>{post.title}</h2>
+                    <Link to={`/Blogs/${blog._id}`} className="blog-title">
+                      <h2>{blog.title}</h2>
                     </Link>
 
-                    <p className="post-excerpt">
-                      {post.excerpt || post.content.substring(0, 150) + "..."}
+                    <p className="blog-excerpt">
+                      {blog.excerpt || blog.content.substring(0, 150) + "..."}
                     </p>
 
-                    <div className="post-tags">
-                      {post.tags &&
-                        post.tags.map((tag, index) => (
+                    <div className="blog-tags">
+                      {blog.tags &&
+                        blog.tags.map((tag, index) => (
                           <span
                             key={index}
-                            className="post-tag"
+                            className="blog-tag"
                             onClick={(e) => {
                               e.preventDefault();
                               handleTagToggle(tag);
@@ -271,24 +263,24 @@ const Posts = () => {
                         ))}
                     </div>
 
-                    <div className="post-footer">
-                      <div className="post-author">
-                        {post.author?.profilePicture && (
+                    <div className="blog-footer">
+                      <div className="blog-author">
+                        {blog.author?.profilePicture && (
                           <img
-                            src={post.author.profilePicture}
-                            alt={post.author?.name}
+                            src={blog.author.profilePicture}
+                            alt={blog.author?.name}
                             className="author-avatar"
                           />
                         )}
-                        <span>By {post.author?.name || "Unknown"}</span>
+                        <span>By {blog.author?.name || "Unknown"}</span>
                       </div>
-                      <div className="post-stats">
-                        <span className="post-views">
-                          <i className="fas fa-eye"></i> {post.viewCount || 0}
+                      <div className="blog-stats">
+                        <span className="blog-views">
+                          <i className="fas fa-eye"></i> {blog.viewCount || 0}
                         </span>
-                        <span className="post-likes">
+                        <span className="blog-likes">
                           <i className="fas fa-heart"></i>{" "}
-                          {post.likesCount || 0}
+                          {blog.likesCount || 0}
                         </span>
                       </div>
                     </div>
@@ -320,7 +312,7 @@ const Posts = () => {
                     );
                   })
                   .map((page, i, arr) => (
-                    <React.Fragment key={page}>
+                    <Fragment key={page}>
                       {i > 0 && arr[i - 1] !== page - 1 && (
                         <span className="page-ellipsis">...</span>
                       )}
@@ -332,7 +324,7 @@ const Posts = () => {
                       >
                         {page}
                       </button>
-                    </React.Fragment>
+                    </Fragment>
                   ))}
               </div>
 
@@ -351,4 +343,4 @@ const Posts = () => {
   );
 };
 
-export default Posts;
+export default Blogs;

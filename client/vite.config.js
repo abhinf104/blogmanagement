@@ -12,4 +12,12 @@ export default defineConfig({
       },
     },
   },
+  resolve: {
+    alias: {
+      react: "react",
+    },
+  },
+  build: {
+    sourcemap: true, // Helps with debugging
+  },
 });

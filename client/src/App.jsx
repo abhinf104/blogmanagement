@@ -5,7 +5,6 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import Posts from "./pages/Posts";
 import NotFound from "./pages/NotFound";
 import SinglePost from "./pages/SinglePost";
 import CreatePost from "./pages/CreatePost";
@@ -28,7 +27,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/blog" element={<BlogList />} />
-              <Route path="/posts" element={<Posts />} />
+
               <Route path="/posts/:id" element={<SinglePost />} />
 
               {/* Protected routes - require authentication */}

@@ -1,17 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import useReduxSelectors from "../hooks/useReduxSelectors";
 import { logoutUser } from "../redux/slices/authSlice";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimes, faBars } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faTimes,
+  faBars,
+  faUser,
+  faPen,
+  faChartBar,
+  faSignOutAlt,
+} from "@fortawesome/free-solid-svg-icons";
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user, isAuthenticated } = useReduxSelectors();
-  const [isMenuOpen, setIsMenuOpen] = useState(false); //for mobile
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Handle scroll effect for navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const handleLogout = () => {
     dispatch(logoutUser());
@@ -28,10 +50,10 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="navbar">
+    <nav className={`navbar ${scrolled ? "scrolled" : ""}`}>
       <div className="navbar-container">
         <Link to="/" className="navbar-logo" onClick={closeMenu}>
-          BlogMaster
+          <span className="logo-text">BlogMaster</span>
         </Link>
 
         <div className="menu-icon" onClick={toggleMenu}>
@@ -53,10 +75,9 @@ const Navbar = () => {
             </li>
           )}
 
-          {/* Blog link - always visible */}
           <li className="nav-item">
             <Link
-              to="/blog" // Link to the blog list page
+              to="/blog"
               className={
                 location.pathname === "/blog" ? "nav-link active" : "nav-link"
               }
@@ -66,7 +87,7 @@ const Navbar = () => {
             </Link>
           </li>
 
-          {/* Links for Authenticated Users */}
+          {/* Conditional rendering based on authentication */}
           {isAuthenticated && user ? (
             <>
               {/* Dashboard for authors/admins */}
@@ -81,7 +102,8 @@ const Navbar = () => {
                     }
                     onClick={closeMenu}
                   >
-                    Dashboard
+                    <FontAwesomeIcon icon={faChartBar} className="nav-icon" />
+                    <span>Dashboard</span>
                   </Link>
                 </li>
               )}
@@ -98,13 +120,43 @@ const Navbar = () => {
                     }
                     onClick={closeMenu}
                   >
-                    Write Post
+                    <FontAwesomeIcon icon={faPen} className="nav-icon" />
+                    <span>Write Post</span>
                   </Link>
                 </li>
               )}
 
-              {/* Profile Link */}
-              <li className="nav-item">
+              {/* User menu with dropdown (desktop only) */}
+              <li className="nav-item user-menu">
+                <div className="user-avatar">
+                  {user.profilePicture ? (
+                    <img src={user.profilePicture} alt={user.name} />
+                  ) : (
+                    <span>{user.name?.charAt(0) || "U"}</span>
+                  )}
+                </div>
+
+                <div className="user-dropdown">
+                  <Link
+                    to="/profile"
+                    className="dropdown-item"
+                    onClick={closeMenu}
+                  >
+                    <FontAwesomeIcon icon={faUser} />
+                    <span>Profile</span>
+                  </Link>
+                  <button
+                    className="dropdown-item logout"
+                    onClick={handleLogout}
+                  >
+                    <FontAwesomeIcon icon={faSignOutAlt} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </li>
+
+              {/* Profile and Logout for mobile */}
+              <li className="nav-item mobile-only">
                 <Link
                   to="/profile"
                   className={
@@ -114,14 +166,14 @@ const Navbar = () => {
                   }
                   onClick={closeMenu}
                 >
-                  Profile
+                  <FontAwesomeIcon icon={faUser} className="nav-icon" />
+                  <span>Profile</span>
                 </Link>
               </li>
-
-              {/* Logout Button */}
-              <li className="nav-item">
+              <li className="nav-item mobile-only">
                 <button className="nav-link logout-btn" onClick={handleLogout}>
-                  Logout
+                  <FontAwesomeIcon icon={faSignOutAlt} className="nav-icon" />
+                  <span>Logout</span>
                 </button>
               </li>
             </>
@@ -144,11 +196,7 @@ const Navbar = () => {
               <li className="nav-item">
                 <Link
                   to="/register"
-                  className={
-                    location.pathname === "/register"
-                      ? "nav-link active register-btn" // Keep register button style
-                      : "nav-link register-btn"
-                  }
+                  className="nav-link register-btn"
                   onClick={closeMenu}
                 >
                   Register
@@ -159,20 +207,26 @@ const Navbar = () => {
         </ul>
       </div>
 
-      {/* Inline styles remain the same */}
       <style jsx="true">{`
-        /* ... existing styles ... */
         .navbar {
-          background-color: #fff;
-          height: 80px;
+          background-color: rgba(255, 255, 255, 0.98);
+          height: 70px;
           display: flex;
           justify-content: center;
           align-items: center;
-          font-size: 1.2rem;
+          font-size: 1.1rem;
           position: sticky;
           top: 0;
           z-index: 999;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+          transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
+        }
+
+        .navbar.scrolled {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          height: 60px;
+          background-color: rgba(255, 255, 255, 0.98);
         }
 
         .navbar-container {
@@ -182,34 +236,49 @@ const Navbar = () => {
           width: 100%;
           max-width: 1200px;
           padding: 0 2rem;
+          height: 100%;
         }
 
         .navbar-logo {
-          color: #4299e1;
-          font-size: 1.8rem;
-          font-weight: bold;
+          color: #3182ce;
+          font-size: 1.6rem;
+          font-weight: 700;
           text-decoration: none;
-          cursor: pointer;
+          display: flex;
+          align-items: center;
+          transition: all 0.2s ease;
+        }
+
+        .navbar-logo:hover {
+          color: #2c5282;
+        }
+
+        .logo-text {
+          background: linear-gradient(135deg, #3182ce, #63b3ed);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
 
         .nav-menu {
           display: flex;
           align-items: center;
           list-style: none;
-          text-align: center;
           margin: 0;
           padding: 0;
+          height: 100%;
         }
 
         .nav-item {
-          height: 80px;
+          height: 100%;
           display: flex;
           align-items: center;
-          margin-right: 1rem; /* Adjust spacing */
+          margin-left: 1.5rem;
+          position: relative;
         }
-        /* Remove last item margin */
-        .nav-item:last-child {
-          margin-right: 0;
+
+        .nav-item:first-child {
+          margin-left: 0;
         }
 
         .nav-link {
@@ -220,48 +289,148 @@ const Navbar = () => {
           padding: 0.5rem 1rem;
           height: 100%;
           font-weight: 500;
-          transition: all 0.3s ease;
+          transition: all 0.2s ease;
           cursor: pointer;
           border: none;
           background: none;
-          font-size: 1rem; /* Consistent font size */
-          border-bottom: 3px solid transparent; /* Add transparent border for alignment */
+          font-size: 1rem;
+          position: relative;
         }
 
         .nav-link:hover {
-          color: #4299e1;
+          color: #3182ce;
         }
 
         .nav-link.active {
-          color: #4299e1;
-          border-bottom: 3px solid #4299e1;
+          color: #3182ce;
+        }
+
+        .nav-link.active::after {
+          content: "";
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          height: 3px;
+          background: #3182ce;
+          border-radius: 2px 2px 0 0;
+        }
+
+        .nav-icon {
+          margin-right: 0.5rem;
+          font-size: 0.9rem;
         }
 
         .register-btn {
-          background-color: #4299e1;
-          color: white !important; /* Ensure text is white */
+          background-color: #3182ce;
+          color: white !important;
           border-radius: 4px;
-          padding: 0.5rem 1rem;
-          height: auto; /* Override height */
-          border-bottom: none; /* Remove border for button */
+          padding: 0.5rem 1.2rem;
+          height: auto;
+          border: none;
         }
 
         .register-btn:hover {
-          background-color: #3182ce;
-          color: white !important;
-          border-bottom: none;
-        }
-        .register-btn.active {
-          /* Style if active, though unlikely for register */
-          border-bottom: none;
+          background-color: #2c5282;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 6px rgba(66, 153, 225, 0.15);
         }
 
         .logout-btn {
           color: #e53e3e;
-          border-bottom: 3px solid transparent; /* Match nav-link */
         }
 
         .logout-btn:hover {
+          color: #c53030;
+        }
+
+        /* User dropdown styles */
+        .user-menu {
+          position: relative;
+        }
+
+        .user-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: #e2e8f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          overflow: hidden;
+          border: 2px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+
+        .user-avatar:hover {
+          border-color: #3182ce;
+        }
+
+        .user-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .user-avatar span {
+          font-weight: bold;
+          color: #4a5568;
+          font-size: 1rem;
+        }
+
+        .user-dropdown {
+          position: absolute;
+          top: 100%;
+          right: 0;
+          background: white;
+          border-radius: 6px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          width: 180px;
+          overflow: hidden;
+          opacity: 0;
+          visibility: hidden;
+          transform: translateY(10px);
+          transition: all 0.2s ease;
+        }
+
+        .user-menu:hover .user-dropdown {
+          opacity: 1;
+          visibility: visible;
+          transform: translateY(0);
+        }
+
+        .dropdown-item {
+          display: flex;
+          align-items: center;
+          padding: 0.75rem 1rem;
+          color: #4a5568;
+          text-decoration: none;
+          transition: background-color 0.2s ease;
+          border: none;
+          background: none;
+          width: 100%;
+          text-align: left;
+          font-size: 0.9rem;
+          cursor: pointer;
+        }
+
+        .dropdown-item:hover {
+          background-color: #f7fafc;
+          color: #3182ce;
+        }
+
+        .dropdown-item svg {
+          margin-right: 10px;
+          font-size: 0.9rem;
+        }
+
+        .dropdown-item.logout {
+          color: #e53e3e;
+        }
+
+        .dropdown-item.logout:hover {
+          background-color: #fed7d7;
           color: #c53030;
         }
 
@@ -269,27 +438,38 @@ const Navbar = () => {
           display: none;
         }
 
+        .mobile-only {
+          display: none;
+        }
+
         @media screen and (max-width: 960px) {
           .navbar {
-            position: relative;
+            height: 60px;
+          }
+
+          .navbar-container {
+            padding: 0 1.5rem;
+          }
+
+          .navbar-logo {
+            font-size: 1.4rem;
           }
 
           .nav-menu {
             display: flex;
             flex-direction: column;
             width: 100%;
-            /* Adjust height or use max-height */
-            max-height: calc(100vh - 80px);
+            max-height: calc(100vh - 60px);
             overflow-y: auto;
             position: absolute;
-            top: 80px;
+            top: 60px;
             left: -100%;
-            opacity: 1;
-            transition: all 0.5s ease;
-            padding: 2rem 0;
-            background: #fff; /* Ensure background */
+            opacity: 0;
+            transition: all 0.4s ease;
+            padding: 1rem 0;
+            background: #fff;
             z-index: 1;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
           }
 
           .nav-menu.active {
@@ -299,41 +479,48 @@ const Navbar = () => {
 
           .nav-item {
             height: auto;
-            margin: 0; /* Remove side margin */
-            width: 100%; /* Full width */
+            margin: 0;
+            width: 100%;
           }
 
           .nav-link {
-            text-align: center;
-            padding: 1.5rem; /* Increase padding */
+            text-align: left;
+            padding: 1rem 2rem;
             width: 100%;
-            display: block; /* Change to block */
-            border-bottom: 1px solid #eee; /* Add separator */
+            display: flex;
+            border-bottom: 1px solid #f7fafc;
           }
+
           .nav-link.active {
-            border-bottom: 1px solid #eee; /* Keep separator */
-            background-color: #f7fafc; /* Highlight active */
+            background-color: #ebf8ff;
+            border-left: 4px solid #3182ce;
+            padding-left: calc(2rem - 4px);
+          }
+
+          .nav-link.active::after {
+            display: none;
           }
 
           .register-btn {
-            margin: 1rem auto; /* Center button */
-            width: 80%;
-            padding: 1rem;
+            margin: 1rem 2rem;
+            width: calc(100% - 4rem);
+            text-align: center;
+            justify-content: center;
           }
 
           .menu-icon {
             display: block;
-            font-size: 1.8rem;
+            font-size: 1.4rem;
             cursor: pointer;
+            color: #4a5568;
           }
 
-          .nav-link.active {
-            border-bottom: none;
-            background-color: #f7fafc;
-          }
-
-          .user-greeting {
+          .user-menu {
             display: none;
+          }
+
+          .mobile-only {
+            display: block;
           }
         }
       `}</style>

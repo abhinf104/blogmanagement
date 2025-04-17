@@ -1,498 +1,791 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, Link } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { fetchPostById } from "../redux/slices/postSlice";
+import { createComment } from "../redux/slices/commentSlice";
+import useReduxSelectors from "../hooks/useReduxSelectors";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  fetchComments,
-  createComment,
-  clearComments,
-  addSocketComment,
-  updateSocketComment,
-  deleteSocketComment,
-  setCurrentPostId,
-} from "../redux/slices/commentSlice";
-import { userService } from "../services/api"; // Assuming userService exists
-import io from "socket.io-client";
-import "../assets/styles/single-post.css";
+  faCalendarAlt,
+  faComment,
+  faChevronLeft,
+  faPaperPlane,
+  faExclamationTriangle,
+} from "@fortawesome/free-solid-svg-icons";
 
 const SinglePost = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { isAuthenticated, user } = useReduxSelectors();
+  const { currentPost, loading, error } = useSelector((state) => state.posts);
 
-  // Selectors
-  const { user, token } = useSelector((state) => state.auth);
-  const {
-    currentPost,
-    loading: postLoading,
-    error: postError,
-  } = useSelector((state) => state.posts);
-  const {
-    comments,
-    loading: commentsLoading,
-    error: commentsError,
-    currentPage,
-    hasMore,
-  } = useSelector((state) => state.comments);
+  const [comment, setComment] = useState("");
+  const commentInputRef = useRef(null);
 
-  // Local State
-  const [author, setAuthor] = useState(null);
-  // Consider fetching via Redux if needed elsewhere
-  const [commentText, setCommentText] = useState("");
-  const [replyTo, setReplyTo] = useState(null); // { _id: commentId, author: { name: authorName } }
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Format date function
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
-  const socketRef = useRef();
+  // Comment date formatting
+  const formatCommentDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+    });
+  };
 
-  // --- Effects ---
-
-  // Fetch Post Data
   useEffect(() => {
-    if (id) {
-      dispatch(fetchPostById(id));
-      dispatch(setCurrentPostId(id)); // Set current post ID for comment slice
+    dispatch(fetchPostById(id));
+    window.scrollTo(0, 0);
+
+    // Update document title
+    if (currentPost?.title) {
+      document.title = `${currentPost.title} | BlogMaster`;
     }
-    // Clear comments when navigating away or to a different post
+
     return () => {
-      dispatch(clearComments());
+      document.title = "BlogMaster"; // Reset title on unmount
     };
-  }, [dispatch, id]);
+  }, [dispatch, id, currentPost]);
 
-  // Fetch Author Data when post is loaded
-  useEffect(() => {
-    const fetchAuthor = async () => {
-      if (currentPost?.author?._id) {
-        try {
-          // Assuming userService.getUserById exists
-          const response = await userService.getUserById(
-            currentPost.author._id
-          );
-          setAuthor(response.data.user);
-        } catch (err) {
-          console.error("Failed to fetch author:", err);
-          setAuthor({ name: "Unknown Author" }); // Fallback
-        }
-      } else if (currentPost?.author) {
-        // If author object is already populated but missing details
-        setAuthor(currentPost.author);
-      }
-    };
-    fetchAuthor();
-    // Fetch related posts based on currentPost.categories or tags
-  }, [currentPost]);
-
-  // Fetch Comments
-  const loadComments = useCallback(
-    (page = 1) => {
-      if (id) {
-        console.log(`Loading comments for post ${id}, page ${page}`);
-        dispatch(fetchComments({ postId: id, page }))
-          .unwrap()
-          .then((result) => {
-            console.log(
-              `Loaded ${result.comments.length} comments successfully`
-            );
-          })
-          .catch((err) => {
-            console.error("Failed to load comments:", err);
-          });
-      }
-    },
-    [dispatch, id]
-  );
-
-  useEffect(() => {
-    loadComments(1); // Load first page initially
-  }, [loadComments]);
-
-  // Update your Socket.IO connection code
-  useEffect(() => {
-    if (!id || !token) return;
-
-    // Use the correct environment variable with Vite syntax
-    const socketURL =
-      import.meta.env.VITE_SOCKET_URL || "http://localhost:3000";
-
-    console.log("Connecting to socket at:", socketURL);
-
-    // Connect with auth token and explicit path
-    socketRef.current = io(socketURL, {
-      path: "/socket.io",
-      auth: { token },
-      withCredentials: true,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-      transports: ["websocket", "polling"],
-    });
-
-    // Add connection status handlers for debugging
-    socketRef.current.on("connect", () => {
-      console.log("Socket connected successfully");
-      socketRef.current.emit("joinPost", id);
-    });
-
-    socketRef.current.on("connect_error", (err) => {
-      console.error("Socket connection error:", err);
-    });
-
-    // Socket event handlers for comments
-    socketRef.current.on("commentAdded", (comment) => {
-      console.log("Comment added via socket:", comment);
-      dispatch(addSocketComment(comment));
-    });
-
-    socketRef.current.on("commentUpdated", (comment) => {
-      console.log("Comment updated via socket:", comment);
-      dispatch(updateSocketComment(comment));
-    });
-
-    socketRef.current.on("commentDeleted", (commentId) => {
-      console.log("Comment deleted via socket:", commentId);
-      dispatch(deleteSocketComment(commentId));
-    });
-
-    // Cleanup on component unmount
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.emit("leavePost", id);
-        socketRef.current.disconnect();
-      }
-    };
-  }, [id, token, dispatch]);
-  // --- Handlers ---
-
-  const handleSubmitComment = async (e) => {
+  // Handle comment submission
+  const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    if (!commentText.trim() || isSubmitting) return;
-    if (!user) {
-      navigate("/login"); // Redirect if not logged in
-      return;
-    }
 
-    setIsSubmitting(true);
-    const commentData = {
-      postId: id,
-      content: commentText,
-      parentId: replyTo ? replyTo._id : null,
-    };
+    if (!comment.trim() || !isAuthenticated) return;
 
     try {
-      // Dispatch createComment thunk
-      await dispatch(createComment(commentData)).unwrap();
-
-      // Socket.io will handle adding the comment via 'commentAdded' event
-      setCommentText("");
-      setReplyTo(null);
-    } catch (err) {
-      console.error("Failed to post comment:", err);
-      alert(`Failed to post comment: ${err.message || "Please try again."}`);
-    } finally {
-      setIsSubmitting(false);
+      await dispatch(createComment({ postId: id, content: comment }));
+      setComment("");
+    } catch (error) {
+      console.error("Failed to add comment:", error);
     }
   };
 
-  const handleReply = (comment) => {
-    setReplyTo(comment);
-    const commentInput = document.getElementById("comment-input");
-    if (commentInput) {
-      commentInput.focus();
-      commentInput.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  };
-
-  const loadMoreComments = () => {
-    if (!commentsLoading && hasMore) {
-      loadComments(currentPage + 1);
-    }
-  };
-
-  // --- Render Logic ---
-
-  // recursively render the comments
-  const renderCommentsRecursive = (commentList, level = 0) => {
-    if (
-      !commentList ||
-      !Array.isArray(commentList) ||
-      commentList.length === 0
-    ) {
-      return null;
-    }
-
-    return commentList.map((comment) => {
-      // Skip invalid comments
-      if (!comment || typeof comment !== "object" || !comment._id) {
-        console.warn("Invalid comment object:", comment);
-        return null;
-      }
-
-      return (
-        <div
-          key={comment._id}
-          className="comment-item"
-          style={{ marginLeft: `${level * 20}px` }}
-        >
-          <div className="comment-avatar">
-            <img
-              src={
-                comment.author?.profilePicture ||
-                "https://via.placeholder.com/50?text=U"
-              }
-              alt={comment.author?.name || "User"}
-            />
-          </div>
-          <div className="comment-content">
-            <div className="comment-header">
-              <h4>{comment.author?.name || "Anonymous"}</h4>
-              <span className="comment-date">
-                {new Date(comment.createdAt).toLocaleDateString()}
-                {comment.isEdited && (
-                  <span className="edited-tag"> (edited)</span>
-                )}
-              </span>
-            </div>
-            {/* Safely render comment content */}
-            <p>{typeof comment.content === "string" ? comment.content : ""}</p>
-            {user && (
-              <button
-                className="reply-btn"
-                onClick={() => handleReply(comment)}
-              >
-                Reply
-              </button>
-            )}
-
-            {/* Render replies with safety check */}
-            {Array.isArray(comment.replies) && comment.replies.length > 0 && (
-              <div className="nested-comments">
-                {renderCommentsRecursive(comment.replies, level + 1)}
-              </div>
-            )}
-          </div>
+  // Loading state
+  if (loading && !currentPost) {
+    return (
+      <div className="post-container">
+        <div className="loading-state">
+          <div className="loading-pulse"></div>
+          <p>Loading article...</p>
         </div>
-      );
-    });
-  };
-
-  // --- Loading and Error States ---
-  if (postLoading) {
-    return (
-      <div className="post-container loading">
-        <div className="spinner"></div>
-        <p>Loading post...</p>
       </div>
     );
   }
 
-  if (postError) {
+  // Error state
+  if (error || !currentPost) {
     return (
-      <div className="post-container error-message">
-        <p>Error loading post: {postError}</p>
-        <button onClick={() => navigate("/posts")}>Back to Posts</button>
+      <div className="post-container">
+        <div className="error-state">
+          <FontAwesomeIcon
+            icon={faExclamationTriangle}
+            className="error-icon"
+          />
+          <h2>Couldn't load this article</h2>
+          <p>There was an error loading the content.</p>
+          <button
+            onClick={() => dispatch(fetchPostById(id))}
+            className="retry-button"
+          >
+            Try Again
+          </button>
+          <Link to="/blog" className="back-link">
+            Back to Blog
+          </Link>
+        </div>
       </div>
     );
   }
 
-  if (!currentPost) {
-    return (
-      <div className="post-container error-message">
-        <p>Post not found.</p>
-        <button onClick={() => navigate("/posts")}>Back to Posts</button>
-      </div>
-    );
-  }
-
-  // --- Main Render ---
   return (
     <div className="post-container">
+      {/* Back to Blogs */}
+      <div className="post-navigation">
+        <Link to="/blog" className="back-link">
+          <FontAwesomeIcon icon={faChevronLeft} />
+          <span>Back to Blogs</span>
+        </Link>
+      </div>
+
       {/* Post Header */}
       <header className="post-header">
-        <h1>{currentPost.title}</h1>
+        <h1 className="post-title">{currentPost.title}</h1>
+
         <div className="post-meta">
-          <div className="post-categories">
-            {currentPost.categories?.map((cat) => (
-              <span key={cat} className="category-label">
-                {cat}
+          <div className="author-info">
+            {currentPost.author?.profilePicture ? (
+              <img
+                src={currentPost.author.profilePicture}
+                alt={currentPost.author.name}
+                className="author-avatar"
+              />
+            ) : (
+              <div className="author-avatar-placeholder">
+                {currentPost.author?.name?.charAt(0) || "U"}
+              </div>
+            )}
+            <div>
+              <span className="author-name">
+                {currentPost.author?.name || "Unknown Author"}
               </span>
-            ))}
+              <span className="post-date">
+                <FontAwesomeIcon icon={faCalendarAlt} />
+                {formatDate(currentPost.createdAt)}
+              </span>
+            </div>
           </div>
-          <div className="post-date">
-            <span>
-              {new Date(currentPost.createdAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </span>
-            {/* TODO: Add Edit/Delete buttons for authorized users */}
-            {user &&
-              (user.userId === currentPost.author?._id ||
-                user.role === "admin") && (
-                <Link
-                  to={`/posts/edit/${currentPost._id}`}
-                  className="edit-post-link"
-                >
-                  Edit Post
-                </Link>
-              )}
-          </div>
-        </div>
-        <div className="post-tags">
-          {currentPost.tags?.map((tag) => (
-            <span key={tag} className="tag-label">
-              #{tag}
-            </span>
-          ))}
         </div>
       </header>
 
       {/* Featured Image */}
       {currentPost.featuredImage && (
-        <div className="featured-image">
-          <img src={currentPost.featuredImage} alt={currentPost.title} />
-        </div>
-      )}
-
-      {/* Author Section */}
-      {author && (
-        <div className="author-section">
-          <div className="author-avatar">
-            <img
-              src={
-                author.profilePicture ||
-                "https://via.placeholder.com/100?text=A"
-              }
-              alt={author.name}
-            />
-          </div>
-          <div className="author-info">
-            <h3>
-              {/* Link to author profile if implemented */}
-              {/* <Link to={`/profile/${author._id}`}> */}
-              {author.name}
-              {/* </Link> */}
-            </h3>
-            <p>{author.bio || "No bio available."}</p>
-          </div>
+        <div className="featured-image-container">
+          <img
+            src={currentPost.featuredImage}
+            alt={currentPost.title}
+            className="featured-image"
+          />
         </div>
       )}
 
       {/* Post Content */}
-      <div className="post-content">
-        {typeof currentPost.content === "string" ? (
-          <div dangerouslySetInnerHTML={{ __html: currentPost.content }} />
-        ) : (
-          <p>No content available</p>
-        )}
-      </div>
+      <article className="post-content">
+        <div
+          className="content-html"
+          dangerouslySetInnerHTML={{
+            __html: currentPost.content || "",
+          }}
+        />
+      </article>
 
-      {/* Related Posts */}
-      {/* TODO: Implement related posts fetching and rendering */}
-      {/* <div className="related-posts-section"> ... </div> */}
-
-      {/* Comments Section */}
-      <div className="comments-section">
-        <h2>Comments ({comments.length})</h2>
-
-        {/* Comment Form */}
-        {user ? ( // Only show form if logged in
-          <form
-            id="comment-form"
-            className="comment-form"
-            onSubmit={handleSubmitComment}
-          >
-            {replyTo && (
-              <div className="reply-indicator">
-                <span>Replying to {replyTo.author.name}</span>
-                <button
-                  type="button"
-                  className="cancel-reply"
-                  onClick={() => setReplyTo(null)}
-                  aria-label="Cancel reply"
-                >
-                  ×
-                </button>
+      {/* Author Bio */}
+      {currentPost.author && (
+        <div className="author-bio">
+          <div className="author-bio-header">
+            {currentPost.author.profilePicture ? (
+              <img
+                src={currentPost.author.profilePicture}
+                alt={currentPost.author.name}
+                className="bio-avatar"
+              />
+            ) : (
+              <div className="bio-avatar-placeholder">
+                {currentPost.author.name?.charAt(0) || "U"}
               </div>
             )}
-            <textarea
-              id="comment-input"
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder={
-                replyTo ? "Write your reply..." : "Add a public comment..."
-              }
-              required
-              rows="4"
-            />
-            <button
-              type="submit"
-              className="submit-comment"
-              disabled={!commentText.trim() || isSubmitting}
-            >
-              {isSubmitting ? "Submitting..." : replyTo ? "Reply" : "Comment"}
-            </button>
+            <div>
+              <h3 className="bio-name">{currentPost.author.name}</h3>
+              {currentPost.author.role && (
+                <span className="bio-role">{currentPost.author.role}</span>
+              )}
+            </div>
+          </div>
+          <p className="bio-text">
+            {currentPost.author.bio ||
+              `Author of "${currentPost.title}" and other great content on our platform.`}
+          </p>
+        </div>
+      )}
+
+      {/* Comments Section */}
+      <section className="comments-section" id="comments-section">
+        <h2 className="section-title">
+          <FontAwesomeIcon icon={faComment} />
+          Comments ({currentPost.comments?.length || 0})
+        </h2>
+
+        {/* Comment Form */}
+        {isAuthenticated ? (
+          <form className="comment-form" onSubmit={handleCommentSubmit}>
+            <div className="comment-input-wrapper">
+              <div className="comment-avatar">
+                {user?.profilePicture ? (
+                  <img src={user.profilePicture} alt={user.name} />
+                ) : (
+                  <div className="avatar-placeholder">
+                    {user?.name?.charAt(0) || "U"}
+                  </div>
+                )}
+              </div>
+              <div className="comment-input-container">
+                <textarea
+                  ref={commentInputRef}
+                  className="comment-input"
+                  placeholder="Share your thoughts on this article..."
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  required
+                ></textarea>
+                <button
+                  type="submit"
+                  className="comment-submit"
+                  disabled={!comment.trim()}
+                >
+                  <FontAwesomeIcon icon={faPaperPlane} />
+                  <span>Post Comment</span>
+                </button>
+              </div>
+            </div>
           </form>
         ) : (
-          <p className="login-prompt">
-            <Link to="/login">Log in</Link> or{" "}
-            <Link to="/register">Sign up</Link> to leave a comment.
-          </p>
+          <div className="comment-login-prompt">
+            <p>
+              Please{" "}
+              <Link
+                to="/login"
+                state={{ from: `/posts/${id}` }}
+                className="login-link"
+              >
+                log in
+              </Link>{" "}
+              to join the discussion.
+            </p>
+          </div>
         )}
 
-        {/* Comments List with Error Boundary */}
-        <div className="comments-list-container">
-          {commentsLoading && currentPage === 1 ? (
-            <div className="loading-comments">
-              <div className="spinner small"></div>
-              <p>Loading comments...</p>
-            </div>
-          ) : commentsError ? (
-            <div className="error-message">
-              <p>
-                Error loading comments:{" "}
-                {typeof commentsError === "string"
-                  ? commentsError
-                  : "Failed to load comments"}
-              </p>
-              <button onClick={() => loadComments(1)}>Try Again</button>
-            </div>
-          ) : comments.length === 0 ? (
-            <div className="no-comments">
-              <p>No comments yet. Be the first to comment!</p>
-            </div>
-          ) : (
-            <>
-              {/* Wrap the comment rendering in a try/catch */}
-              {(() => {
-                try {
-                  // Filter to only top-level comments (no parent)
-                  const topLevelComments = comments.filter((c) => !c.parent);
-                  return renderCommentsRecursive(topLevelComments);
-                } catch (error) {
-                  console.error("Error rendering comments:", error);
-                  return (
-                    <div className="error-message">
-                      <p>Error displaying comments. Please refresh the page.</p>
+        {/* Comments List */}
+        <div className="comments-list">
+          {currentPost.comments && currentPost.comments.length > 0 ? (
+            currentPost.comments.map((comment) => (
+              <div key={comment._id} className="comment">
+                <div className="comment-avatar">
+                  {comment.author?.profilePicture ? (
+                    <img
+                      src={comment.author.profilePicture}
+                      alt={comment.author.name}
+                    />
+                  ) : (
+                    <div className="avatar-placeholder">
+                      {comment.author?.name?.charAt(0) || "U"}
                     </div>
-                  );
-                }
-              })()}
-
-              {hasMore && (
-                <div className="load-more">
-                  <button
-                    onClick={loadMoreComments}
-                    disabled={commentsLoading}
-                    className="load-more-btn"
-                  >
-                    {commentsLoading ? "Loading..." : "Load More Comments"}
-                  </button>
+                  )}
                 </div>
-              )}
-            </>
+                <div className="comment-content">
+                  <div className="comment-header">
+                    <h4 className="comment-author">
+                      {comment.author?.name || "Anonymous User"}
+                    </h4>
+                    <span className="comment-date">
+                      {formatCommentDate(comment.createdAt)}
+                    </span>
+                  </div>
+                  <div className="comment-body">
+                    <p>{comment.content}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="no-comments">
+              <p>No comments yet. Be the first to share your thoughts!</p>
+            </div>
           )}
         </div>
-      </div>
+      </section>
+
+      <style jsx="true">{`
+        .post-container {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 0 1rem;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+            Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+          color: #333;
+          line-height: 1.6;
+        }
+
+        /* Navigation */
+        .post-navigation {
+          margin: 1.5rem 0;
+        }
+
+        .back-link {
+          display: inline-flex;
+          align-items: center;
+          color: #555;
+          text-decoration: none;
+          font-weight: 500;
+        }
+
+        .back-link svg {
+          margin-right: 0.5rem;
+        }
+
+        .back-link:hover {
+          color: #3182ce;
+        }
+
+        /* Post Header */
+        .post-header {
+          margin-bottom: 1.5rem;
+        }
+
+        .post-title {
+          font-size: 2.25rem;
+          line-height: 1.2;
+          color: #222;
+          margin-bottom: 1rem;
+          font-weight: 700;
+        }
+
+        .post-meta {
+          margin-bottom: 1rem;
+        }
+
+        .author-info {
+          display: flex;
+          align-items: center;
+        }
+
+        .author-avatar,
+        .author-avatar-placeholder {
+          width: 42px;
+          height: 42px;
+          border-radius: 50%;
+          margin-right: 0.75rem;
+          overflow: hidden;
+        }
+
+        .author-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .author-avatar-placeholder {
+          background: #e6e6e6;
+          color: #666;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: 1.25rem;
+        }
+
+        .author-name {
+          display: block;
+          font-weight: 600;
+          color: #333;
+        }
+
+        .post-date {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          color: #666;
+          font-size: 0.85rem;
+        }
+
+        /* Featured Image */
+        .featured-image-container {
+          margin-bottom: 1.5rem;
+          border-radius: 0.5rem;
+          overflow: hidden;
+        }
+
+        .featured-image {
+          width: 100%;
+          max-height: 500px;
+          object-fit: cover;
+          object-position: center;
+        }
+
+        /* Post Content */
+        .post-content {
+          font-size: 1.1rem;
+          line-height: 1.7;
+          color: #333;
+          margin-bottom: 2rem;
+        }
+
+        .content-html {
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+        }
+
+        .content-html h2 {
+          font-size: 1.8rem;
+          margin-top: 2rem;
+          margin-bottom: 1rem;
+          color: #222;
+          font-weight: 600;
+        }
+
+        .content-html h3 {
+          font-size: 1.4rem;
+          margin-top: 1.75rem;
+          margin-bottom: 0.75rem;
+          color: #222;
+          font-weight: 600;
+        }
+
+        .content-html p {
+          margin-bottom: 1.5rem;
+        }
+
+        .content-html blockquote {
+          border-left: 3px solid #3182ce;
+          padding-left: 1.25rem;
+          margin: 1.5rem 0;
+          font-style: italic;
+          color: #555;
+        }
+
+        .content-html img {
+          max-width: 100%;
+          border-radius: 0.4rem;
+          margin: 1.5rem 0;
+        }
+
+        .content-html a {
+          color: #3182ce;
+          text-decoration: underline;
+        }
+
+        /* Author Bio */
+        .author-bio {
+          margin: 2rem 0;
+          padding: 1.5rem;
+          background: #f9f9f9;
+          border-radius: 0.5rem;
+          border: 1px solid #eaeaea;
+        }
+
+        .author-bio-header {
+          display: flex;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+
+        .bio-avatar,
+        .bio-avatar-placeholder {
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          margin-right: 1rem;
+          overflow: hidden;
+        }
+
+        .bio-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .bio-avatar-placeholder {
+          background: #e6e6e6;
+          color: #666;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: 1.5rem;
+        }
+
+        .bio-name {
+          font-size: 1.1rem;
+          margin: 0 0 0.25rem 0;
+          font-weight: 600;
+        }
+
+        .bio-role {
+          color: #666;
+          font-size: 0.85rem;
+        }
+
+        .bio-text {
+          color: #444;
+          font-size: 0.95rem;
+          margin: 0;
+          line-height: 1.6;
+        }
+
+        /* Comments Section */
+        .comments-section {
+          margin-top: 2rem;
+          padding-top: 1.5rem;
+          border-top: 1px solid #eaeaea;
+        }
+
+        .section-title {
+          font-size: 1.3rem;
+          margin-bottom: 1.5rem;
+          display: flex;
+          align-items: center;
+          color: #222;
+          font-weight: 600;
+        }
+
+        .section-title svg {
+          margin-right: 0.75rem;
+          color: #3182ce;
+        }
+
+        /* Comment Form */
+        .comment-form {
+          margin-bottom: 2rem;
+        }
+
+        .comment-input-wrapper {
+          display: flex;
+          gap: 1rem;
+        }
+
+        .comment-avatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+
+        .comment-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .avatar-placeholder {
+          width: 100%;
+          height: 100%;
+          background: #e6e6e6;
+          color: #666;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: 1.1rem;
+        }
+
+        .comment-input-container {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+        }
+
+        .comment-input {
+          width: 100%;
+          min-height: 100px;
+          padding: 0.9rem;
+          border: 1px solid #ddd;
+          border-radius: 0.4rem;
+          margin-bottom: 0.75rem;
+          font-family: inherit;
+          font-size: 0.95rem;
+          resize: vertical;
+        }
+
+        .comment-input:focus {
+          outline: none;
+          border-color: #3182ce;
+        }
+
+        .comment-submit {
+          align-self: flex-end;
+          padding: 0.6rem 1.25rem;
+          background: #3182ce;
+          color: white;
+          border: none;
+          border-radius: 0.4rem;
+          font-weight: 500;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .comment-submit:hover {
+          background: #2b6cb0;
+        }
+
+        .comment-submit:disabled {
+          background: #cbd5e0;
+          cursor: not-allowed;
+        }
+
+        .comment-login-prompt {
+          text-align: center;
+          padding: 1.5rem;
+          background: #f9f9f9;
+          border-radius: 0.4rem;
+          margin-bottom: 2rem;
+          border: 1px solid #eaeaea;
+        }
+
+        .login-link {
+          color: #3182ce;
+          font-weight: 500;
+          text-decoration: underline;
+        }
+
+        /* Comments List */
+        .comments-list {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        .comment {
+          display: flex;
+          gap: 1rem;
+        }
+
+        .comment-content {
+          flex: 1;
+          background: #f9f9f9;
+          padding: 1rem;
+          border-radius: 0.4rem;
+          position: relative;
+          border: 1px solid #eaeaea;
+        }
+
+        .comment-content::before {
+          content: "";
+          position: absolute;
+          left: -6px;
+          top: 15px;
+          width: 0;
+          height: 0;
+          border-top: 6px solid transparent;
+          border-bottom: 6px solid transparent;
+          border-right: 6px solid #f9f9f9;
+        }
+
+        .comment-header {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 0.5rem;
+        }
+
+        .comment-author {
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: #333;
+          margin: 0;
+        }
+
+        .comment-date {
+          color: #777;
+          font-size: 0.8rem;
+        }
+
+        .comment-body {
+          color: #444;
+          line-height: 1.5;
+          font-size: 0.95rem;
+        }
+
+        .comment-body p {
+          margin: 0;
+        }
+
+        .no-comments {
+          text-align: center;
+          padding: 2rem;
+          color: #666;
+          background: #f9f9f9;
+          border-radius: 0.4rem;
+          border: 1px solid #eaeaea;
+        }
+
+        /* Loading & Error States */
+        .loading-state,
+        .error-state {
+          padding: 3rem 0;
+          text-align: center;
+          color: #666;
+        }
+
+        .loading-pulse {
+          width: 40px;
+          height: 40px;
+          margin: 0 auto 1rem;
+          border-radius: 50%;
+          background: #e6f0fc;
+          animation: pulse 1.2s infinite;
+        }
+
+        @keyframes pulse {
+          0% {
+            transform: scale(0.8);
+            opacity: 0.5;
+          }
+          50% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(0.8);
+            opacity: 0.5;
+          }
+        }
+
+        .error-icon {
+          font-size: 2rem;
+          color: #e53e3e;
+          margin-bottom: 1rem;
+        }
+
+        .retry-button,
+        .back-link {
+          display: inline-block;
+          padding: 0.6rem 1.25rem;
+          margin: 1rem 0.5rem 0;
+          border-radius: 0.4rem;
+          font-weight: 500;
+        }
+
+        .retry-button {
+          background: #3182ce;
+          color: white;
+          border: none;
+          cursor: pointer;
+        }
+
+        .retry-button:hover {
+          background: #2b6cb0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+          .post-title {
+            font-size: 2rem;
+          }
+        }
+
+        @media (max-width: 576px) {
+          .post-title {
+            font-size: 1.75rem;
+          }
+
+          .comment-input-wrapper {
+            flex-direction: column;
+          }
+
+          .comment-avatar {
+            margin-bottom: 0.75rem;
+          }
+
+          .comment-submit {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+      `}</style>
     </div>
   );
 };

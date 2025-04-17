@@ -160,7 +160,7 @@ function Dashboard() {
               <div className="link-icon">✍️</div>
               <span>New Post</span>
             </Link>
-            <Link to="/posts" className="quick-link">
+            <Link to="/blog" className="quick-link">
               <div className="link-icon">📚</div>
               <span>All Posts</span>
             </Link>
