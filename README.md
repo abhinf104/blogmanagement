@@ -65,7 +65,7 @@ BlogMaster is a comprehensive blog management system built with the MERN stack (
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/blogmanagement.git
+   git clone https://github.com/abhinf104/blogmanagement.git
    cd blogmanagement
    ```
 2. Install dependencies
